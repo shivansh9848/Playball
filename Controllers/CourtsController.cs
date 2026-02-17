@@ -19,7 +19,7 @@ public class CourtsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> CreateCourt([FromBody] CreateCourtRequest request)
     {
         var court = await _courtService.CreateCourtAsync(User.GetUserId(), request);
@@ -27,7 +27,7 @@ public class CourtsController : ControllerBase
     }
 
     [HttpPut("{courtId}")]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> UpdateCourt(int courtId, [FromBody] UpdateCourtRequest request)
     {
         var court = await _courtService.UpdateCourtAsync(User.GetUserId(), courtId, request);
@@ -35,7 +35,7 @@ public class CourtsController : ControllerBase
     }
 
     [HttpDelete("{courtId}")]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> DeleteCourt(int courtId)
     {
         await _courtService.DeleteCourtAsync(User.GetUserId(), courtId);

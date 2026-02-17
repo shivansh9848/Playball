@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>
+            [Assignment_Example_HU]Assignment_Example_HU.Infrastructure.*,
+            [Assignment_Example_HU]Assignment_Example_HU.Services.*,
+            [Assignment_Example_HU]Assignment_Example_HU.Controllers.*,
+            [Assignment_Example_HU]Assignment_Example_HU.Common.*,
+            [Assignment_Example_HU]Assignment_Example_HU.Domain.*,
+            [Assignment_Example_HU]Program
+          </Exclude>
+          <ExcludeByFile>
+            **/Program.cs,
+            **/Migrations/**
+          </ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

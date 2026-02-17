@@ -7,7 +7,7 @@ public interface IVenueService
 {
     Task<VenueResponse> CreateVenueAsync(int ownerId, CreateVenueRequest request);
     Task<VenueResponse> ApproveVenueAsync(int adminId, int venueId, ApproveVenueRequest request);
-    Task<IEnumerable<VenueResponse>> GetAllVenuesAsync();
+    Task<IEnumerable<VenueResponse>> GetAllVenuesAsync(string? sportsSupported = null, string? location = null);
     Task<IEnumerable<VenueResponse>> GetMyVenuesAsync(int ownerId);
     Task<IEnumerable<VenueResponse>> GetPendingVenuesAsync();
     Task<VenueResponse?> GetVenueByIdAsync(int venueId);

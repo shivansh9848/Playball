@@ -17,8 +17,8 @@ public class BookingsController : ControllerBase
         _bookingService = bookingService;
     }
 
-    [HttpPost("lock")]
-    [Authorize(Roles = "Player,Owner")]
+    [HttpPost("lock-slot")]
+    [Authorize(Roles = "User")]
     public async Task<IActionResult> LockSlot([FromBody] LockSlotRequest request)
     {
         var response = await _bookingService.LockSlotAsync(User.GetUserId(), request);
@@ -26,7 +26,7 @@ public class BookingsController : ControllerBase
     }
 
     [HttpPost("confirm")]
-    [Authorize(Roles = "Player,Owner")]
+    [Authorize(Roles = "User")]
     public async Task<IActionResult> ConfirmBooking([FromBody] ConfirmBookingRequest request)
     {
         var response = await _bookingService.ConfirmBookingAsync(User.GetUserId(), request);

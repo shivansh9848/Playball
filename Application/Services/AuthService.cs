@@ -4,6 +4,7 @@ using Assignment_Example_HU.Application.Interfaces;
 using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Common.Helpers;
 using Assignment_Example_HU.Domain.Entities;
+using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 
@@ -48,14 +49,14 @@ public class AuthService : IAuthService
             throw new BusinessException("User with this phone number already exists");
         }
 
-        // Create new user
+        // Create new user (always defaults to User role for security)
         var user = new User
         {
             FullName = request.FullName,
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
-            Role = request.Role,
+            Role = UserRole.User, // Security: Always User for new registrations
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };

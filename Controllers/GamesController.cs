@@ -18,7 +18,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Player,Owner")]
+    [Authorize(Roles = "User,GameOwner")]
     public async Task<IActionResult> CreateGame([FromBody] CreateGameRequest request)
     {
         var game = await _gameService.CreateGameAsync(User.GetUserId(), request);
@@ -26,7 +26,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost("{gameId}/join")]
-    [Authorize(Roles = "Player,Owner")]
+    [Authorize(Roles = "User,GameOwner")]
     public async Task<IActionResult> JoinGame(int gameId)
     {
         await _gameService.JoinGameAsync(User.GetUserId(), gameId);
@@ -34,7 +34,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost("{gameId}/leave")]
-    [Authorize(Roles = "Player,Owner")]
+    [Authorize(Roles = "User,GameOwner")]
     public async Task<IActionResult> LeaveGame(int gameId)
     {
         await _gameService.LeaveGameAsync(User.GetUserId(), gameId);

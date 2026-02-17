@@ -18,11 +18,19 @@ public class DiscountsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> CreateDiscount([FromBody] CreateDiscountRequest request)
     {
         var discount = await _discountService.CreateDiscountAsync(User.GetUserId(), request);
         return Ok(discount);
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "VenueOwner,Admin")]
+    public async Task<IActionResult> GetMyDiscounts()
+    {
+        var discounts = await _discountService.GetMyDiscountsAsync(User.GetUserId());
+        return Ok(discounts);
     }
 
     [HttpGet("venue/{venueId}")]

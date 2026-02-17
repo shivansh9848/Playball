@@ -80,6 +80,24 @@ public class VenueService : IVenueService
         return await Task.WhenAll(venues.Select(MapToResponse));
     }
 
+    public async Task<IEnumerable<VenueResponse>> GetAllVenuesAsync(string? sportsSupported = null, string? location = null)
+    {
+        var query = await _venueRepository.FindAsync(v => v.ApprovalStatus == ApprovalStatus.Approved);
+        
+        // Apply optional filters
+        if (!string.IsNullOrEmpty(sportsSupported))
+        {
+            query = query.Where(v => v.SportsSupported != null && v.SportsSupported.Contains(sportsSupported, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (!string.IsNullOrEmpty(location))
+        {
+            query = query.Where(v => v.Address != null && v.Address.Contains(location, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        return await Task.WhenAll(query.Select(MapToResponse));
+    }
+
     public async Task<IEnumerable<VenueResponse>> GetPendingVenuesAsync()
     {
         var venues = await _venueRepository.GetPendingVenuesAsync();

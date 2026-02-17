@@ -28,6 +28,4 @@ public class RegisterUserRequest
     [Required]
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
     public string ConfirmPassword { get; set; } = string.Empty;
-
-    public UserRole Role { get; set; } = UserRole.User;
 }

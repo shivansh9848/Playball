@@ -20,7 +20,7 @@ public class VenuesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> CreateVenue([FromBody] CreateVenueRequest request)
     {
         var venue = await _venueService.CreateVenueAsync(User.GetUserId(), request);
@@ -28,10 +28,18 @@ public class VenuesController : ControllerBase
     }
 
     [HttpGet("my")]
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "VenueOwner")]
     public async Task<IActionResult> GetMyVenues()
     {
         var venues = await _venueService.GetMyVenuesAsync(User.GetUserId());
+        return Ok(venues);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAllVenues([FromQuery] string? sportsSupported, [FromQuery] string? location)
+    {
+        var venues = await _venueService.GetAllVenuesAsync(sportsSupported, location);
         return Ok(venues);
     }
 

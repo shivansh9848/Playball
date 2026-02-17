@@ -6,6 +6,7 @@ using Assignment_Example_HU.Domain.Constants;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Caching;
+using Assignment_Example_HU.Infrastructure.Data;
 using Assignment_Example_HU.Infrastructure.Repositories;
 
 namespace Assignment_Example_HU.Application.Services;
@@ -19,6 +20,7 @@ public class BookingService : IBookingService
     private readonly IRepository<Transaction> _transactionRepository;
     private readonly IPricingService _pricingService;
     private readonly ICacheService _cacheService;
+    private readonly ApplicationDbContext _context;
 
     public BookingService(
         IBookingRepository bookingRepository,
@@ -27,7 +29,8 @@ public class BookingService : IBookingService
         IRepository<Wallet> walletRepository,
         IRepository<Transaction> transactionRepository,
         IPricingService pricingService,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        ApplicationDbContext context)
     {
         _bookingRepository = bookingRepository;
         _courtRepository = courtRepository;
@@ -36,6 +39,7 @@ public class BookingService : IBookingService
         _transactionRepository = transactionRepository;
         _pricingService = pricingService;
         _cacheService = cacheService;
+        _context = context;
     }
 
     public async Task<BookingResponse> LockSlotAsync(int userId, LockSlotRequest request)
@@ -161,30 +165,44 @@ public class BookingService : IBookingService
         if (userWallet.Balance < booking.PriceLocked)
             throw new BusinessException("Insufficient wallet balance");
 
-        // Debit wallet
-        userWallet.Balance -= booking.PriceLocked;
-        await _walletRepository.UpdateAsync(userWallet);
-
-        // Create transaction record
-        var transaction = new Transaction
+        // ACID Transaction: Wrap wallet debit + booking confirm in database transaction
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            WalletId = userWallet.WalletId,
-            Type = TransactionType.Debit,
-            Amount = booking.PriceLocked,
-            BalanceAfter = userWallet.Balance,
-            Description = $"Booking for Court #{booking.CourtId} on {booking.SlotStartTime:yyyy-MM-dd HH:mm}",
-            BookingId = booking.BookingId,
-            CreatedAt = DateTime.UtcNow
-        };
-        await _transactionRepository.AddAsync(transaction);
+            // Debit wallet
+            userWallet.Balance -= booking.PriceLocked;
+            userWallet.UpdatedAt = DateTime.UtcNow;
+            await _walletRepository.UpdateAsync(userWallet);
 
-        // Update booking
-        booking.Status = BookingStatus.Confirmed;
-        booking.AmountPaid = booking.PriceLocked;
-        booking.ConfirmedAt = DateTime.UtcNow;
-        await _bookingRepository.UpdateAsync(booking);
+            // Create transaction record
+            var walletTransaction = new Transaction
+            {
+                WalletId = userWallet.WalletId,
+                Type = TransactionType.Debit,
+                Amount = booking.PriceLocked,
+                BalanceAfter = userWallet.Balance,
+                Description = $"Booking for Court #{booking.CourtId} on {booking.SlotStartTime:yyyy-MM-dd HH:mm}",
+                BookingId = booking.BookingId,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _transactionRepository.AddAsync(walletTransaction);
 
-        await _bookingRepository.SaveChangesAsync();
+            // Update booking
+            booking.Status = BookingStatus.Confirmed;
+            booking.AmountPaid = booking.PriceLocked;
+            booking.ConfirmedAt = DateTime.UtcNow;
+            await _bookingRepository.UpdateAsync(booking);
+
+            // Commit all changes atomically
+            await _bookingRepository.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            // Rollback on any error
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         return await MapToResponseAsync(booking);
     }

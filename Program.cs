@@ -45,6 +45,8 @@ builder.Services.AddSingleton<Assignment_Example_HU.Infrastructure.Caching.ICach
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IVenueService, VenueService>();
 builder.Services.AddScoped<ICourtService, CourtService>();
 builder.Services.AddScoped<IDiscountService, DiscountService>();
@@ -52,10 +54,15 @@ builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IPricingService, PricingService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<ISlotService, SlotService>();
+builder.Services.AddScoped<IRatingService, RatingService>();
+builder.Services.AddScoped<IWaitlistService, WaitlistService>();
+builder.Services.AddScoped<IPlayerProfileService, PlayerProfileService>();
 
 // Register background services
 builder.Services.AddHostedService<Assignment_Example_HU.Services.GameAutoCancelService>();
 builder.Services.AddHostedService<Assignment_Example_HU.Services.SlotLockExpiryService>();
+builder.Services.AddHostedService<Assignment_Example_HU.Services.RefundProcessorService>();
+builder.Services.AddHostedService<Assignment_Example_HU.Services.DiscountExpiryService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
