@@ -143,13 +143,23 @@ public class GameService : IGameService
     public async Task<IEnumerable<GameResponse>> GetPublicGamesAsync()
     {
         var games = await _gameRepository.GetPublicGamesAsync();
-        return await Task.WhenAll(games.Select(g => MapToResponse(g.GameId)));
+        var response = new List<GameResponse>();
+        foreach (var game in games)
+        {
+            response.Add(await MapToResponse(game.GameId));
+        }
+        return response;
     }
 
     public async Task<IEnumerable<GameResponse>> GetMyGamesAsync(int userId)
     {
         var games = await _gameRepository.GetGamesByUserAsync(userId);
-        return await Task.WhenAll(games.Select(g => MapToResponse(g.GameId)));
+        var response = new List<GameResponse>();
+        foreach (var game in games)
+        {
+            response.Add(await MapToResponse(game.GameId));
+        }
+        return response;
     }
 
     public async Task<GameResponse?> GetGameByIdAsync(int gameId)

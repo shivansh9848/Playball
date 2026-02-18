@@ -81,7 +81,12 @@ public class DiscountService : IDiscountService
             (d.VenueId.HasValue && venueIds.Contains(d.VenueId.Value)) ||
             (d.CourtId.HasValue && d.Court != null && venueIds.Contains(d.Court.VenueId)));
 
-        return await Task.WhenAll(discounts.Select(MapToResponse));
+        var response = new List<DiscountResponse>();
+        foreach (var discount in discounts)
+        {
+            response.Add(await MapToResponse(discount));
+        }
+        return response;
     }
 
     public async Task<IEnumerable<DiscountResponse>> GetActiveDiscountsAsync()
@@ -92,7 +97,12 @@ public class DiscountService : IDiscountService
             d.ValidFrom <= now &&
             d.ValidTo >= now);
 
-        return await Task.WhenAll(discounts.Select(MapToResponse));
+        var response = new List<DiscountResponse>();
+        foreach (var discount in discounts)
+        {
+            response.Add(await MapToResponse(discount));
+        }
+        return response;
     }
 
     public async Task<DiscountResponse?> GetApplicableDiscountAsync(int? venueId, int? courtId, DateTime slotTime)
@@ -112,14 +122,26 @@ public class DiscountService : IDiscountService
     {
         var discounts = await _discountRepository.FindAsync(d =>
             d.VenueId == venueId && d.IsActive);
-        return await Task.WhenAll(discounts.Select(MapToResponse));
+            
+        var response = new List<DiscountResponse>();
+        foreach (var discount in discounts)
+        {
+            response.Add(await MapToResponse(discount));
+        }
+        return response;
     }
 
     public async Task<IEnumerable<DiscountResponse>> GetDiscountsByCourtAsync(int courtId)
     {
         var discounts = await _discountRepository.FindAsync(d =>
             d.CourtId == courtId && d.IsActive);
-        return await Task.WhenAll(discounts.Select(MapToResponse));
+            
+        var response = new List<DiscountResponse>();
+        foreach (var discount in discounts)
+        {
+            response.Add(await MapToResponse(discount));
+        }
+        return response;
     }
 
     private async Task<DiscountResponse> MapToResponse(Discount discount)
