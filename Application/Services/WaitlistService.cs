@@ -46,7 +46,7 @@ public class WaitlistService : IWaitlistService
             throw new BusinessException("Game is not full. Join the game directly instead.");
 
         // Check if user is already in the game
-        if (participants.Any(gp => gp.UserId == userId))
+        if (participants.Any(gp => gp.UserId == userId && gp.IsActive))
             throw new BusinessException("You are already in this game");
 
         // Check if already on waitlist
@@ -111,7 +111,12 @@ public class WaitlistService : IWaitlistService
         }
         await _waitlistRepository.SaveChangesAsync();
 
-        return await Task.WhenAll(sortedEntries.Select(MapToResponseAsync));
+        var responseList = new List<WaitlistResponse>();
+        foreach (var entry in sortedEntries)
+        {
+            responseList.Add(await MapToResponseAsync(entry));
+        }
+        return responseList;
     }
 
     public async Task InviteFromWaitlistAsync(int gameOwnerId, int gameId, int waitlistUserId)

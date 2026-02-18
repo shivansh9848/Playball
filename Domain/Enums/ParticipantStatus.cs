@@ -4,5 +4,6 @@ public enum ParticipantStatus
 {
     Pending,
     Accepted,
-    Rejected
+    Rejected,
+    Invited
 }

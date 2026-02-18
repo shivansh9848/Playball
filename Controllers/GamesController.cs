@@ -90,4 +90,11 @@ public class GamesController : ControllerBase
             return NotFound(ApiResponse<object>.ErrorResponse($"Game with ID {gameId} not found."));
         return Ok(ApiResponse<GameResponse>.SuccessResponse(game, "Game details retrieved successfully."));
     }
+    [HttpPost("{gameId}/invite")]
+    [Authorize(Roles = "User,GameOwner")]
+    public async Task<IActionResult> InviteUser(int gameId, [FromBody] InviteUserRequest request)
+    {
+        var game = await _gameService.InviteUserAsync(User.GetUserId(), gameId, request.Email); 
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, "User invited successfully."));
+    }
 }

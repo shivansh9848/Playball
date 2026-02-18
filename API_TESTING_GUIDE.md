@@ -193,12 +193,15 @@ This guide provides tested and verified JSON examples for the core workflows of 
 *   **Result**: "You have successfully joined".
 *   **Status**: `CurrentPlayers = 2/2` (FULL).
 
-### Step 3: User 3 Tries to Join (Fails -> Joins Waitlist)
+### Step 3: User 3 Tries to Join (Auto-Waitlist)
 **User**: User 3
 **POST** `/api/Games/100/join`
-*   **Result**: **Error 400**: "Game is full".
-**POST** `/api/games/100/Waitlist`
-*   **Result**: "You have joined the waitlist at position #1".
+*   **Result**: "You have successfully joined..." (Actually added to Waitlist, check response/waitlist).
+*   **Note**: The system now automatically places you on the waitlist if the game is full.
+**GET** `/api/games/100/Waitlist`
+*   **Result**: User 3 should be at position #1.
+
+*Note: If an invited user tries to join a full game, their invite is deactivated, and they are also moved to the waitlist.*
 
 ### Step 4: User 4 Joins Waitlist
 **User**: User 4

@@ -17,6 +17,7 @@ public class GameService : IGameService
     private readonly IWalletService _walletService;
     private readonly IRepository<Venue> _venueRepository;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IWaitlistService _waitlistService;
 
     public GameService(
         IGameRepository gameRepository,
@@ -25,7 +26,8 @@ public class GameService : IGameService
         IBookingService bookingService,
         IWalletService walletService,
         IRepository<Venue> venueRepository,
-        IBookingRepository bookingRepository)
+        IBookingRepository bookingRepository,
+        IWaitlistService waitlistService)
     {
         _gameRepository = gameRepository;
         _participantRepository = participantRepository;
@@ -34,6 +36,7 @@ public class GameService : IGameService
         _walletService = walletService;
         _venueRepository = venueRepository;
         _bookingRepository = bookingRepository;
+        _waitlistService = waitlistService;
     }
 
     public async Task<GameResponse> CreateGameAsync(int userId, CreateGameRequest request)
@@ -122,29 +125,76 @@ public class GameService : IGameService
         if (game == null)
             throw new NotFoundException("Game", gameId);
 
+        // check if user was already invited - this bypasses full check
+        var existingInvite = game.Participants.FirstOrDefault(p => p.UserId == userId && p.IsActive && p.Status == ParticipantStatus.Invited);
+        
+        if (existingInvite != null)
+        {
+            // Auto-accept invited user
+            // If game is full, we still accept invited users? Usually yes, reserved spot. 
+            // Or maybe check if strict max. 
+            // For now, let's assume invitations reserve a logical spot or override.
+            // But if CurrentPlayers >= MaxPlayers, we might overfill.
+            // Let's strictly check capacity unless we implement reserved slots.
+            
+            if (game.CurrentPlayers >= game.MaxPlayers)
+            {
+                 // Game is full, but user was invited. 
+                 // Since they cannot be in both GameParticipants (as Invited) and Waitlist,
+                 // we must remove them from Participants (or deactivate) and move to Waitlist.
+                 
+                 existingInvite.IsActive = false; 
+                 await _participantRepository.UpdateAsync(existingInvite);
+                 await _participantRepository.SaveChangesAsync(); // Commit removal first
+
+                 await _waitlistService.JoinWaitlistAsync(userId, gameId);
+                 return await MapToResponse(gameId);
+            }
+
+            var status = ParticipantStatus.Accepted;
+            existingInvite.Status = status;
+            existingInvite.JoinedAt = DateTime.UtcNow;
+            await _participantRepository.UpdateAsync(existingInvite);
+            
+            game.CurrentPlayers++;
+            if (game.CurrentPlayers >= game.MaxPlayers)
+                game.Status = GameStatus.Full;
+
+            await _gameRepository.UpdateAsync(game);
+            await _gameRepository.SaveChangesAsync();
+            return await MapToResponse(gameId);
+        }
+
+        // Check if user is already in game (active and not invited)
+        if (game.Participants.Any(p => p.UserId == userId && p.IsActive && p.Status != ParticipantStatus.Invited))
+            throw new BusinessException("You are already in this game");
+
+        // CHECK FULL CAPACITY -> AUTO WAITLIST
+        if (game.Status == GameStatus.Full || game.CurrentPlayers >= game.MaxPlayers)
+        {
+            // Auto-join waitlist
+            await _waitlistService.JoinWaitlistAsync(userId, gameId);
+            // Return response, user should see they are not in Participants list or we can return a message if we had a wrapper.
+            // For now, standard response.
+            return await MapToResponse(gameId);
+        }
+        
         if (game.Status != GameStatus.Open)
             throw new BusinessException("Game is not open for joining");
 
-        if (game.Participants.Any(p => p.UserId == userId && p.IsActive))
-            throw new BusinessException("You are already in this game");
-
-        if (game.CurrentPlayers >= game.MaxPlayers)
-            throw new BusinessException("Game is full");
-
-        var status = game.IsPublic ? ParticipantStatus.Accepted : ParticipantStatus.Pending;
-
+        // Normal join flow
+        var joinStatus = game.IsPublic ? ParticipantStatus.Accepted : ParticipantStatus.Pending;
         var participant = new GameParticipant
         {
             GameId = gameId,
             UserId = userId,
             JoinedAt = DateTime.UtcNow,
             IsActive = true,
-            Status = status
+            Status = joinStatus
         };
-
         await _participantRepository.AddAsync(participant);
 
-        if (status == ParticipantStatus.Accepted)
+        if (joinStatus == ParticipantStatus.Accepted)
         {
             game.CurrentPlayers++;
             if (game.CurrentPlayers >= game.MaxPlayers)
@@ -304,6 +354,37 @@ public class GameService : IGameService
              }
         }
         await _gameRepository.SaveChangesAsync();
+    }
+
+    public async Task<GameResponse> InviteUserAsync(int requesterId, int gameId, string email)
+    {
+        var game = await _gameRepository.GetGameWithParticipantsAsync(gameId);
+        if (game == null)
+            throw new NotFoundException("Game", gameId);
+
+        if (game.CreatedBy != requesterId)
+            throw new UnauthorizedException("Only the game owner can invite players");
+
+        var userToInvite = await _userRepository.GetByEmailAsync(email);
+        if (userToInvite == null)
+            throw new NotFoundException("User with email " + email + " not found");
+
+        if (game.Participants.Any(p => p.UserId == userToInvite.UserId && p.IsActive))
+            throw new BusinessException("User is already in the game or has a pending request");
+
+        var participant = new GameParticipant
+        {
+            GameId = gameId,
+            UserId = userToInvite.UserId,
+            JoinedAt = DateTime.UtcNow,
+            IsActive = true,
+            Status = ParticipantStatus.Invited
+        };
+
+        await _participantRepository.AddAsync(participant);
+        await _participantRepository.SaveChangesAsync();
+
+        return await MapToResponse(gameId);
     }
 
     private async Task<GameResponse> MapToResponse(int gameId)
