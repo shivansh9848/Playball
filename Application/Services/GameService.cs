@@ -147,7 +147,8 @@ public class GameService : IGameService
                  await _participantRepository.UpdateAsync(existingInvite);
                  await _participantRepository.SaveChangesAsync(); // Commit removal first
 
-                 await _waitlistService.JoinWaitlistAsync(userId, gameId);
+                 // Join waitlist with IsInvited = true
+                 await _waitlistService.JoinWaitlistAsync(userId, gameId, isInvited: true);
                  return await MapToResponse(gameId);
             }
 

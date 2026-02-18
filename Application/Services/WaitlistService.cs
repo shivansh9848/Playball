@@ -33,7 +33,7 @@ public class WaitlistService : IWaitlistService
         _logger = logger;
     }
 
-    public async Task<WaitlistResponse> JoinWaitlistAsync(int userId, int gameId)
+    public async Task<WaitlistResponse> JoinWaitlistAsync(int userId, int gameId, bool isInvited = false)
     {
         // Verify game exists
         var game = await _gameRepository.GetByIdAsync(gameId);
@@ -71,7 +71,7 @@ public class WaitlistService : IWaitlistService
             UserId = userId,
             Position = position,
             JoinedAt = DateTime.UtcNow,
-            IsInvited = false
+            IsInvited = isInvited
         };
 
         await _waitlistRepository.AddAsync(waitlistEntry);
@@ -142,8 +142,8 @@ public class WaitlistService : IWaitlistService
             throw new NotFoundException("User not found on waitlist");
 
         // 1. Add to Game Participants
-        // Check if already in game (just safety, though waitlist logic should prevent this)
         var existingParticipant = await _gameParticipantRepository.FirstOrDefaultAsync(p => p.GameId == gameId && p.UserId == waitlistUserId);
+        
         if (existingParticipant == null)
         {
             var newParticipant = new GameParticipant
@@ -155,14 +155,22 @@ public class WaitlistService : IWaitlistService
                 Status = ParticipantStatus.Accepted // Auto-accept invited players
             };
             await _gameParticipantRepository.AddAsync(newParticipant);
-            
-            // Update game count
-            game.CurrentPlayers++;
-            if (game.CurrentPlayers >= game.MaxPlayers)
-                game.Status = GameStatus.Full;
-            
-            await _gameRepository.UpdateAsync(game);
         }
+        else
+        {
+            // Reactivate existing participant
+            existingParticipant.IsActive = true;
+            existingParticipant.Status = ParticipantStatus.Accepted;
+            existingParticipant.JoinedAt = DateTime.UtcNow;
+            await _gameParticipantRepository.UpdateAsync(existingParticipant);
+        }
+
+        // Update game count (common for both cases)
+        game.CurrentPlayers++;
+        if (game.CurrentPlayers >= game.MaxPlayers)
+            game.Status = GameStatus.Full;
+        
+        await _gameRepository.UpdateAsync(game);
 
         // 2. Remove from Waitlist (Requirement: "Waitlisted users removed once ... invited")
         await _waitlistRepository.DeleteAsync(waitlistEntry);

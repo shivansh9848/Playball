@@ -200,6 +200,7 @@ This guide provides tested and verified JSON examples for the core workflows of 
 *   **Note**: The system now automatically places you on the waitlist if the game is full.
 **GET** `/api/games/100/Waitlist`
 *   **Result**: User 3 should be at position #1.
+*   **Verify**: `IsInvited` should be `true` for this user.
 
 *Note: If an invited user tries to join a full game, their invite is deactivated, and they are also moved to the waitlist.*
 
