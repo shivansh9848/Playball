@@ -43,7 +43,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost("{gameId}/approve/{participantId}")]
-    [Authorize(Roles = "GameOwner")]
+    [Authorize(Roles = "User,GameOwner")]
     public async Task<IActionResult> ApproveParticipant(int gameId, int participantId)
     {
         var game = await _gameService.ApproveParticipantAsync(User.GetUserId(), gameId, participantId);
@@ -51,7 +51,7 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost("{gameId}/complete")]
-    [Authorize(Roles = "GameOwner,VenueOwner,Admin")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner,Admin")]
     public async Task<IActionResult> CompleteGame(int gameId)
     {
         await _gameService.CompleteGameAsync(gameId);
