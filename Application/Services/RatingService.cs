@@ -15,19 +15,22 @@ public class RatingService : IRatingService
     private readonly IRepository<Venue> _venueRepository;
     private readonly IRepository<Court> _courtRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IRepository<GameParticipant> _participantRepository;
 
     public RatingService(
         IRepository<Rating> ratingRepository,
         IRepository<Game> gameRepository,
         IRepository<Venue> venueRepository,
         IRepository<Court> courtRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IRepository<GameParticipant> participantRepository)
     {
         _ratingRepository = ratingRepository;
         _gameRepository = gameRepository;
         _venueRepository = venueRepository;
         _courtRepository = courtRepository;
         _userRepository = userRepository;
+        _participantRepository = participantRepository;
     }
 
     public async Task<RatingResponse> RateVenueAsync(int userId, int venueId, CreateRatingRequest request)
@@ -40,10 +43,19 @@ public class RatingService : IRatingService
         if (game.Status != GameStatus.Completed)
             throw new BusinessException("You can only rate after the game is completed");
 
+        // Verify user was a participant
+        var participant = await _participantRepository.FirstOrDefaultAsync(p => p.GameId == request.GameId && p.UserId == userId && p.IsActive);
+        if (participant == null)
+            throw new BusinessException("You must be a participant of the game to rate it.");
+
         // Verify venue exists
         var venue = await _venueRepository.GetByIdAsync(venueId);
         if (venue == null)
             throw new NotFoundException("Venue", venueId);
+
+        // Prevent owner from rating their own venue
+        if (venue.OwnerId == userId)
+            throw new BusinessException("You cannot rate your own venue.");
 
         // Check for duplicate rating
         var existingRatings = await _ratingRepository.FindAsync(r =>
@@ -83,10 +95,20 @@ public class RatingService : IRatingService
         if (game.Status != GameStatus.Completed)
             throw new BusinessException("You can only rate after the game is completed");
 
+        // Verify user was a participant
+        var participant = await _participantRepository.FirstOrDefaultAsync(p => p.GameId == request.GameId && p.UserId == userId && p.IsActive);
+        if (participant == null)
+            throw new BusinessException("You must be a participant of the game to rate it.");
+
         // Verify court exists
         var court = await _courtRepository.GetByIdAsync(courtId);
         if (court == null)
             throw new NotFoundException("Court", courtId);
+
+        // Verify venue exists to check owner
+        var venue = await _venueRepository.GetByIdAsync(court.VenueId);
+        if (venue != null && venue.OwnerId == userId)
+            throw new BusinessException("You cannot rate your own court.");
 
         // Check for duplicate rating
         var existingRatings = await _ratingRepository.FindAsync(r =>
@@ -129,10 +151,20 @@ public class RatingService : IRatingService
         if (game.Status != GameStatus.Completed)
             throw new BusinessException("You can only rate after the game is completed");
 
+        // Verify user was a participant
+        var participant = await _participantRepository.FirstOrDefaultAsync(p => p.GameId == request.GameId && p.UserId == userId && p.IsActive);
+        if (participant == null)
+            throw new BusinessException("You must be a participant of the game to rate players.");
+
         // Verify target user exists
         var targetUser = await _userRepository.GetByIdAsync(targetUserId);
         if (targetUser == null)
             throw new NotFoundException("User", targetUserId);
+
+        // Verify target user was also a participant
+        var targetParticipant = await _participantRepository.FirstOrDefaultAsync(p => p.GameId == request.GameId && p.UserId == targetUserId && p.IsActive);
+        if (targetParticipant == null)
+            throw new BusinessException("Target player was not a participant in this game.");
 
         // Check for duplicate rating
         var existingRatings = await _ratingRepository.FindAsync(r =>
@@ -159,6 +191,17 @@ public class RatingService : IRatingService
         await _ratingRepository.AddAsync(rating);
         await _ratingRepository.SaveChangesAsync();
 
+        // Update target user's aggregated rating
+        var userRatings = await _ratingRepository.FindAsync(r => r.TargetType == "Player" && r.TargetUserId == targetUserId);
+        if (userRatings.Any())
+        {
+            targetUser.AggregatedRating = (decimal)userRatings.Average(r => r.Score);
+            var playedGames = await _participantRepository.FindAsync(p => p.UserId == targetUserId && p.IsActive);
+            targetUser.GamesPlayed = playedGames.Count();
+            await _userRepository.UpdateAsync(targetUser);
+            await _userRepository.SaveChangesAsync();
+        }
+
         return await MapToResponseAsync(rating);
     }
 
@@ -168,7 +211,12 @@ public class RatingService : IRatingService
             r.TargetType == "Venue" &&
             r.VenueId == venueId);
 
-        return await Task.WhenAll(ratings.Select(MapToResponseAsync));
+        var result = new List<RatingResponse>();
+        foreach (var rating in ratings)
+        {
+            result.Add(await MapToResponseAsync(rating));
+        }
+        return result;
     }
 
     public async Task<IEnumerable<RatingResponse>> GetCourtRatingsAsync(int courtId)
@@ -177,7 +225,12 @@ public class RatingService : IRatingService
             r.TargetType == "Court" &&
             r.CourtId == courtId);
 
-        return await Task.WhenAll(ratings.Select(MapToResponseAsync));
+        var result = new List<RatingResponse>();
+        foreach (var rating in ratings)
+        {
+            result.Add(await MapToResponseAsync(rating));
+        }
+        return result;
     }
 
     public async Task<IEnumerable<RatingResponse>> GetPlayerRatingsAsync(int playerId)
@@ -186,7 +239,12 @@ public class RatingService : IRatingService
             r.TargetType == "Player" &&
             r.TargetUserId == playerId);
 
-        return await Task.WhenAll(ratings.Select(MapToResponseAsync));
+        var result = new List<RatingResponse>();
+        foreach (var rating in ratings)
+        {
+            result.Add(await MapToResponseAsync(rating));
+        }
+        return result;
     }
 
     public async Task<decimal> GetAverageRatingAsync(int? venueId = null, int? courtId = null, int? playerId = null)

@@ -39,7 +39,7 @@ public class UserService : IUserService
             AggregatedRating = user.AggregatedRating,
             GamesPlayed = user.GamesPlayed,
             PreferredSports = user.PreferredSports,
-            IsActive = user.IsActive,
+
             CreatedAt = user.CreatedAt
         };
     }
@@ -57,34 +57,10 @@ public class UserService : IUserService
             AggregatedRating = u.AggregatedRating,
             GamesPlayed = u.GamesPlayed,
             PreferredSports = u.PreferredSports,
-            IsActive = u.IsActive,
+
             CreatedAt = u.CreatedAt
         });
     }
 
-    public async Task<bool> DeactivateUserAsync(int userId)
-    {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-            throw new NotFoundException("User", userId);
 
-        user.IsActive = false;
-        await _userRepository.UpdateAsync(user);
-        await _userRepository.SaveChangesAsync();
-
-        return true;
-    }
-
-    public async Task<bool> ActivateUserAsync(int userId)
-    {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-            throw new NotFoundException("User", userId);
-
-        user.IsActive = true;
-        await _userRepository.UpdateAsync(user);
-        await _userRepository.SaveChangesAsync();
-
-        return true;
-    }
 }

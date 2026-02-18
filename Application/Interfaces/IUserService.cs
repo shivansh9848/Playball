@@ -7,6 +7,5 @@ public interface IUserService
 {
     Task<UserProfileResponse> AssignRoleAsync(int userId, UserRole newRole);
     Task<IEnumerable<UserProfileResponse>> GetAllUsersAsync();
-    Task<bool> DeactivateUserAsync(int userId);
-    Task<bool> ActivateUserAsync(int userId);
+
 }

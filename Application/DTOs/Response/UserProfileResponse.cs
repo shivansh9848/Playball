@@ -10,6 +10,6 @@ public class UserProfileResponse
     public decimal AggregatedRating { get; set; }
     public int GamesPlayed { get; set; }
     public string PreferredSports { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

@@ -20,7 +20,7 @@ public static class DbSeeder
             PhoneNumber = "9000000000",
             PasswordHash = PasswordHasher.HashPassword("Admin@123"),
             Role = UserRole.Admin,
-            IsActive = true,
+
             CreatedAt = DateTime.UtcNow
         };
 

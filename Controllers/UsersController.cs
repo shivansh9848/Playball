@@ -65,53 +65,5 @@ public class UsersController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Deactivate a user account (Admin only)
-    /// </summary>
-    [HttpPost("{userId}/deactivate")]
-    [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeactivateUser(int userId)
-    {
-        try
-        {
-            var result = await _userService.DeactivateUserAsync(userId);
-            return Ok(ApiResponse<bool>.SuccessResponse(result, "User deactivated successfully"));
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(ApiResponse<object>.ErrorResponse(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deactivating user");
-            return StatusCode(500, ApiResponse<object>.ErrorResponse("An error occurred while deactivating user"));
-        }
-    }
 
-    /// <summary>
-    /// Activate a user account (Admin only)
-    /// </summary>
-    [HttpPost("{userId}/activate")]
-    [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> ActivateUser(int userId)
-    {
-        try
-        {
-            var result = await _userService.ActivateUserAsync(userId);
-            return Ok(ApiResponse<bool>.SuccessResponse(result, "User activated successfully"));
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(ApiResponse<object>.ErrorResponse(ex.Message));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error activating user");
-            return StatusCode(500, ApiResponse<object>.ErrorResponse("An error occurred while activating user"));
-        }
-    }
 }

@@ -57,7 +57,7 @@ public class AuthService : IAuthService
             PhoneNumber = request.PhoneNumber,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
             Role = UserRole.User, // Security: Always User for new registrations
-            IsActive = true,
+
             CreatedAt = DateTime.UtcNow
         };
 
@@ -106,11 +106,7 @@ public class AuthService : IAuthService
             throw new UnauthorizedException("Invalid email or password");
         }
 
-        // Check if user is active
-        if (!user.IsActive)
-        {
-            throw new UnauthorizedException("User account is inactive");
-        }
+
 
         // Update last login
         user.LastLoginAt = DateTime.UtcNow;
@@ -150,7 +146,7 @@ public class AuthService : IAuthService
             AggregatedRating = user.AggregatedRating,
             GamesPlayed = user.GamesPlayed,
             PreferredSports = user.PreferredSports,
-            IsActive = user.IsActive,
+
             CreatedAt = user.CreatedAt
         };
     }

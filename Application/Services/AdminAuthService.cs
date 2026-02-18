@@ -61,7 +61,7 @@ public class AdminAuthService : IAdminAuthService
             PhoneNumber = request.PhoneNumber,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
             Role = UserRole.Admin,   // Always Admin for this endpoint
-            IsActive = true,
+
             CreatedAt = DateTime.UtcNow
         };
 
@@ -103,8 +103,7 @@ public class AdminAuthService : IAdminAuthService
         if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid email or password");
 
-        if (!user.IsActive)
-            throw new UnauthorizedException("Admin account is inactive");
+
 
         // Only allow Admin role users to login via this endpoint
         if (user.Role != UserRole.Admin)

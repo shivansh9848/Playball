@@ -165,7 +165,7 @@ public class ApplicationDbContext : DbContext
             // Password: Admin@123 (pre-hashed with BCrypt)
             PasswordHash = "$2a$11$xK9j5L6rE8QY7X3ZB4N9Ou.XYHZqXqFJKvYzN5LQpW7WMqGKE9/va",
             Role = UserRole.Admin,
-            IsActive = true,
+
             CreatedAt = new DateTime(2026, 2, 17, 0, 0, 0, DateTimeKind.Utc)
         };
 
