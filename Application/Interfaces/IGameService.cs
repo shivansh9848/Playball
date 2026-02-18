@@ -8,8 +8,10 @@ public interface IGameService
     Task<GameResponse> CreateGameAsync(int userId, CreateGameRequest request);
     Task<GameResponse> JoinGameAsync(int userId, int gameId);
     Task<GameResponse> LeaveGameAsync(int userId, int gameId);
+    Task<GameResponse> ApproveParticipantAsync(int userId, int gameId, int participantId);
     Task<IEnumerable<GameResponse>> GetPublicGamesAsync();
     Task<IEnumerable<GameResponse>> GetMyGamesAsync(int userId);
     Task<GameResponse?> GetGameByIdAsync(int gameId);
     Task AutoCancelGamesAsync();
+    Task CompleteGameAsync(int gameId);
 }

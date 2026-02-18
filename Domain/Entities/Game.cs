@@ -55,4 +55,9 @@ public class Game
 
     public virtual ICollection<GameParticipant> Participants { get; set; } = new List<GameParticipant>();
     public virtual ICollection<Waitlist> WaitlistEntries { get; set; } = new List<Waitlist>();
+
+    public int? BookingId { get; set; }
+    
+    [ForeignKey(nameof(BookingId))]
+    public virtual Booking? Booking { get; set; }
 }

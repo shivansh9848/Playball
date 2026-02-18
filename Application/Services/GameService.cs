@@ -13,15 +13,27 @@ public class GameService : IGameService
     private readonly IGameRepository _gameRepository;
     private readonly IRepository<GameParticipant> _participantRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IBookingService _bookingService;
+    private readonly IWalletService _walletService;
+    private readonly IRepository<Venue> _venueRepository;
+    private readonly IBookingRepository _bookingRepository;
 
     public GameService(
         IGameRepository gameRepository,
         IRepository<GameParticipant> participantRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IBookingService bookingService,
+        IWalletService walletService,
+        IRepository<Venue> venueRepository,
+        IBookingRepository bookingRepository)
     {
         _gameRepository = gameRepository;
         _participantRepository = participantRepository;
         _userRepository = userRepository;
+        _bookingService = bookingService;
+        _walletService = walletService;
+        _venueRepository = venueRepository;
+        _bookingRepository = bookingRepository;
     }
 
     public async Task<GameResponse> CreateGameAsync(int userId, CreateGameRequest request)
@@ -34,6 +46,22 @@ public class GameService : IGameService
 
         if (request.StartTime <= DateTime.UtcNow)
             throw new BusinessException("StartTime must be in the future");
+
+        // Validate that the user has a confirmed booking for this slot
+        var booking = await _bookingRepository.FirstOrDefaultAsync(b => 
+            b.UserId == userId && 
+            b.CourtId == request.CourtId && 
+            b.SlotStartTime == request.StartTime && 
+            b.SlotEndTime == request.EndTime &&
+            b.Status == BookingStatus.Confirmed);
+
+        if (booking == null)
+            throw new BusinessException("You must have a confirmed booking for this slot to create a game.");
+
+        // Check if a game already exists for this booking
+        var existingGame = await _gameRepository.FirstOrDefaultAsync(g => g.BookingId == booking.BookingId);
+        if (existingGame != null)
+            throw new BusinessException("A game has already been created for this booking.");
 
         var game = new Game
         {
@@ -49,7 +77,8 @@ public class GameService : IGameService
             CurrentPlayers = 1,
             Status = GameStatus.Open,
             IsPublic = request.IsPublic,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            BookingId = booking.BookingId
         };
 
         await _gameRepository.AddAsync(game);
@@ -61,7 +90,8 @@ public class GameService : IGameService
             GameId = game.GameId,
             UserId = userId,
             JoinedAt = DateTime.UtcNow,
-            IsActive = true
+            IsActive = true,
+            Status = ParticipantStatus.Accepted // Creator is always accepted
         };
 
         await _participantRepository.AddAsync(participant);
@@ -94,21 +124,28 @@ public class GameService : IGameService
         if (game.CurrentPlayers >= game.MaxPlayers)
             throw new BusinessException("Game is full");
 
+        var status = game.IsPublic ? ParticipantStatus.Accepted : ParticipantStatus.Pending;
+
         var participant = new GameParticipant
         {
             GameId = gameId,
             UserId = userId,
             JoinedAt = DateTime.UtcNow,
-            IsActive = true
+            IsActive = true,
+            Status = status
         };
 
         await _participantRepository.AddAsync(participant);
 
-        game.CurrentPlayers++;
-        if (game.CurrentPlayers >= game.MaxPlayers)
-            game.Status = GameStatus.Full;
+        if (status == ParticipantStatus.Accepted)
+        {
+            game.CurrentPlayers++;
+            if (game.CurrentPlayers >= game.MaxPlayers)
+                game.Status = GameStatus.Full;
 
-        await _gameRepository.UpdateAsync(game);
+            await _gameRepository.UpdateAsync(game);
+        }
+        
         await _gameRepository.SaveChangesAsync();
 
         return await MapToResponse(gameId);
@@ -130,9 +167,45 @@ public class GameService : IGameService
         participant.IsActive = false;
         await _participantRepository.UpdateAsync(participant);
 
-        game.CurrentPlayers--;
-        if (game.Status == GameStatus.Full && game.CurrentPlayers < game.MaxPlayers)
-            game.Status = GameStatus.Open;
+        if (participant.Status == ParticipantStatus.Accepted)
+        {
+            game.CurrentPlayers--;
+            if (game.Status == GameStatus.Full && game.CurrentPlayers < game.MaxPlayers)
+                game.Status = GameStatus.Open;
+            
+            await _gameRepository.UpdateAsync(game);
+        }
+
+        await _gameRepository.SaveChangesAsync();
+
+        return await MapToResponse(gameId);
+    }
+
+    public async Task<GameResponse> ApproveParticipantAsync(int userId, int gameId, int participantId)
+    {
+        var game = await _gameRepository.GetGameWithParticipantsAsync(gameId);
+        if (game == null)
+            throw new NotFoundException("Game", gameId);
+
+        if (game.CreatedBy != userId)
+            throw new UnauthorizedException("Only the game owner can approve participants");
+
+        var participant = await _participantRepository.GetByIdAsync(participantId);
+        if (participant == null || participant.GameId != gameId)
+            throw new NotFoundException("Participant", participantId);
+
+        if (participant.Status != ParticipantStatus.Pending)
+            throw new BusinessException("Participant is not pending approval");
+
+        if (game.CurrentPlayers >= game.MaxPlayers)
+            throw new BusinessException("Game is full");
+
+        participant.Status = ParticipantStatus.Accepted;
+        await _participantRepository.UpdateAsync(participant);
+
+        game.CurrentPlayers++;
+        if (game.CurrentPlayers >= game.MaxPlayers)
+            game.Status = GameStatus.Full;
 
         await _gameRepository.UpdateAsync(game);
         await _gameRepository.SaveChangesAsync();
@@ -180,6 +253,48 @@ public class GameService : IGameService
         {
             game.Status = GameStatus.Cancelled;
             await _gameRepository.UpdateAsync(game);
+
+            // Cancel the booking and process refund
+            if (game.BookingId.HasValue)
+            {
+                var booking = await _bookingRepository.GetByIdAsync(game.BookingId.Value);
+                if (booking != null && booking.Status != BookingStatus.Cancelled)
+                {
+                    await _bookingService.CancelBookingAsync(booking.UserId, booking.BookingId, "Game Cancelled (Min players not met)");
+                }
+            }
+        }
+        await _gameRepository.SaveChangesAsync();
+    }
+
+    public async Task CompleteGameAsync(int gameId)
+    {
+        var game = await _gameRepository.GetByIdAsync(gameId);
+        if (game == null) throw new NotFoundException("Game", gameId);
+
+        if (game.Status != GameStatus.Full && game.Status != GameStatus.Open) // Can we complete open games? Probably if they met min players.
+             throw new BusinessException("Game cannot be completed in its current status");
+
+        game.Status = GameStatus.Completed;
+        game.CompletedAt = DateTime.UtcNow;
+        await _gameRepository.UpdateAsync(game);
+
+        if (game.BookingId.HasValue)
+        {
+             // Payout logic
+             var booking = await _bookingRepository.GetByIdAsync(game.BookingId.Value);
+             if (booking != null)
+             {
+                 var venue = await _venueRepository.GetByIdAsync(game.VenueId);
+                 if (venue != null)
+                 {
+                     await _walletService.CreditWalletAsync(
+                         venue.OwnerId, 
+                         booking.AmountPaid, 
+                         $"Payout for Game #{game.GameId} (Booking #{booking.BookingId})",
+                         $"PAYOUT-{game.GameId}");
+                 }
+             }
         }
         await _gameRepository.SaveChangesAsync();
     }

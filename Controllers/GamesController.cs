@@ -42,6 +42,27 @@ public class GamesController : ControllerBase
         return Ok(ApiResponse<GameResponse>.SuccessResponse(game, $"You have left '{game.Title}'."));
     }
 
+    [HttpPost("{gameId}/approve/{participantId}")]
+    [Authorize(Roles = "GameOwner")]
+    public async Task<IActionResult> ApproveParticipant(int gameId, int participantId)
+    {
+        var game = await _gameService.ApproveParticipantAsync(User.GetUserId(), gameId, participantId);
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, "Participant approved successfully."));
+    }
+
+    [HttpPost("{gameId}/complete")]
+    [Authorize(Roles = "GameOwner,VenueOwner,Admin")]
+    public async Task<IActionResult> CompleteGame(int gameId)
+    {
+        await _gameService.CompleteGameAsync(gameId);
+        // Fetch updated game to return
+        var game = await _gameService.GetGameByIdAsync(gameId);
+        if (game == null)
+            return NotFound(ApiResponse<object>.ErrorResponse($"Game with ID {gameId} not found."));
+
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, "Game completed and payouts processed."));
+    }
+
     [HttpGet("public")]
     [AllowAnonymous]
     public async Task<IActionResult> GetPublicGames()

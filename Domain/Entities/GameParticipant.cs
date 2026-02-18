@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Assignment_Example_HU.Domain.Enums;
 
 namespace Assignment_Example_HU.Domain.Entities;
 
@@ -17,6 +18,9 @@ public class GameParticipant
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
     public bool IsActive { get; set; } = true;
+
+    [Required]
+    public ParticipantStatus Status { get; set; } = ParticipantStatus.Accepted;
 
     // Navigation properties
     [ForeignKey(nameof(GameId))]

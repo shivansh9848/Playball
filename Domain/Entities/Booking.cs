@@ -43,7 +43,7 @@ public class Booking
     [MaxLength(500)]
     public string? CancellationReason { get; set; }
 
-    public int? GameId { get; set; }
+
 
     // Navigation properties
     [ForeignKey(nameof(UserId))]
@@ -52,7 +52,6 @@ public class Booking
     [ForeignKey(nameof(CourtId))]
     public virtual Court Court { get; set; } = null!;
 
-    [ForeignKey(nameof(GameId))]
     public virtual Game? Game { get; set; }
 
     public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
