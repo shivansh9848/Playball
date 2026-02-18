@@ -6,6 +6,7 @@ using Assignment_Example_HU.Domain.Constants;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Infrastructure.Caching;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -41,7 +42,7 @@ public class PricingServiceTests
         _discountServiceMock.Setup(d => d.GetApplicableDiscountAsync(1, 1, It.IsAny<DateTime>()))
             .ReturnsAsync((DiscountResponse?)null);
 
-        var slotStart = DateTime.UtcNow.AddHours(48);
+        var slotStart = IstClock.Now.AddHours(48);
         var slotEnd = slotStart.AddHours(1);
         var result = await _pricingService.GetPricingBreakdownAsync(1, slotStart, slotEnd);
 
@@ -57,7 +58,7 @@ public class PricingServiceTests
         _courtRepoMock.Setup(r => r.GetByIdAsync(99)).ReturnsAsync((Court?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => _pricingService.GetPricingBreakdownAsync(99, DateTime.UtcNow.AddHours(2), DateTime.UtcNow.AddHours(3)));
+            () => _pricingService.GetPricingBreakdownAsync(99, IstClock.Now.AddHours(2), IstClock.Now.AddHours(3)));
     }
 
     [Fact]
@@ -71,7 +72,7 @@ public class PricingServiceTests
         _discountServiceMock.Setup(d => d.GetApplicableDiscountAsync(1, 1, It.IsAny<DateTime>()))
             .ReturnsAsync(new DiscountResponse { PercentOff = 20 });
 
-        var slotStart = DateTime.UtcNow.AddHours(48);
+        var slotStart = IstClock.Now.AddHours(48);
         var result = await _pricingService.GetPricingBreakdownAsync(1, slotStart, slotStart.AddHours(1));
 
         Assert.Equal(0.8m, result.DiscountFactor);
@@ -90,7 +91,7 @@ public class PricingServiceTests
         _discountServiceMock.Setup(d => d.GetApplicableDiscountAsync(1, 1, It.IsAny<DateTime>()))
             .ReturnsAsync((DiscountResponse?)null);
 
-        var slotStart = DateTime.UtcNow.AddHours(48);
+        var slotStart = IstClock.Now.AddHours(48);
         var result = await _pricingService.GetPricingBreakdownAsync(1, slotStart, slotStart.AddHours(1));
 
         Assert.Equal(PricingConstants.DemandMultiplier_MoreThan5Viewers, result.DemandMultiplier);
@@ -107,7 +108,7 @@ public class PricingServiceTests
         _discountServiceMock.Setup(d => d.GetApplicableDiscountAsync(1, 1, It.IsAny<DateTime>()))
             .ReturnsAsync((DiscountResponse?)null);
 
-        var slotStart = DateTime.UtcNow.AddHours(48);
+        var slotStart = IstClock.Now.AddHours(48);
         var result = await _pricingService.GetPricingBreakdownAsync(1, slotStart, slotStart.AddHours(1));
 
         Assert.Equal(PricingConstants.HistoricalMultiplier_High, result.HistoricalMultiplier);
@@ -124,7 +125,7 @@ public class PricingServiceTests
         _discountServiceMock.Setup(d => d.GetApplicableDiscountAsync(1, 1, It.IsAny<DateTime>()))
             .ReturnsAsync((DiscountResponse?)null);
 
-        var slotStart = DateTime.UtcNow.AddHours(48);
+        var slotStart = IstClock.Now.AddHours(48);
         var price = await _pricingService.CalculateDynamicPriceAsync(1, slotStart, slotStart.AddHours(1));
 
         Assert.Equal(200m, price);
@@ -135,7 +136,7 @@ public class PricingServiceTests
     {
         _cacheServiceMock.Setup(c => c.GetAsync<long>(It.IsAny<string>())).ReturnsAsync(1L);
 
-        await _pricingService.TrackSlotViewAsync(1, DateTime.UtcNow.AddHours(2));
+        await _pricingService.TrackSlotViewAsync(1, IstClock.Now.AddHours(2));
 
         _cacheServiceMock.Verify(c => c.IncrementAsync(It.IsAny<string>(), 1), Times.Once);
     }
@@ -145,7 +146,7 @@ public class PricingServiceTests
     {
         _cacheServiceMock.Setup(c => c.GetAsync<long>(It.IsAny<string>())).ReturnsAsync(42L);
 
-        var count = await _pricingService.GetSlotViewCountAsync(1, DateTime.UtcNow.AddHours(2));
+        var count = await _pricingService.GetSlotViewCountAsync(1, IstClock.Now.AddHours(2));
 
         Assert.Equal(42L, count);
     }

@@ -1,3 +1,4 @@
+using Assignment_Example_HU.Application.DTOs.Response;
 using Assignment_Example_HU.Application.Interfaces;
 using Assignment_Example_HU.Common.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -20,11 +21,12 @@ public class WaitlistController : ControllerBase
     /// Join waitlist for a game
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "User,GameOwner")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner")]
     public async Task<IActionResult> JoinWaitlist(int gameId)
     {
         var entry = await _waitlistService.JoinWaitlistAsync(User.GetUserId(), gameId);
-        return Ok(entry);
+        return Ok(ApiResponse<WaitlistResponse>.SuccessResponse(entry,
+            $"You have joined the waitlist at position #{entry.Position}. You will be notified if a spot opens up."));
     }
 
     /// <summary>
@@ -35,18 +37,20 @@ public class WaitlistController : ControllerBase
     public async Task<IActionResult> GetWaitlist(int gameId)
     {
         var waitlist = await _waitlistService.GetWaitlistAsync(gameId);
-        return Ok(waitlist);
+        var list = waitlist.ToList();
+        return Ok(ApiResponse<IEnumerable<WaitlistResponse>>.SuccessResponse(list,
+            $"{list.Count} player(s) on the waitlist, sorted by rating."));
     }
 
     /// <summary>
     /// Invite user from waitlist (game owner only)
     /// </summary>
     [HttpPost("invite/{userId}")]
-    [Authorize(Roles = "User,GameOwner")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner")]
     public async Task<IActionResult> InviteFromWaitlist(int gameId, int userId)
     {
         await _waitlistService.InviteFromWaitlistAsync(User.GetUserId(), gameId, userId);
-        return NoContent();
+        return Ok(ApiResponse<object?>.SuccessResponse(null, $"Player (ID: {userId}) has been invited from the waitlist and added to the game."));
     }
 
     /// <summary>
@@ -57,6 +61,6 @@ public class WaitlistController : ControllerBase
     public async Task<IActionResult> LeaveWaitlist(int gameId)
     {
         await _waitlistService.RemoveFromWaitlistAsync(User.GetUserId(), gameId);
-        return NoContent();
+        return Ok(ApiResponse<object?>.SuccessResponse(null, "You have been removed from the waitlist."));
     }
 }

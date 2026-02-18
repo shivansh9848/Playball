@@ -55,7 +55,10 @@ public class VenuesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ApproveVenue(int venueId, [FromBody] ApproveVenueRequest request)
     {
-        await _venueService.ApproveVenueAsync(User.GetUserId(), venueId, request);
-        return NoContent();
+        var venue = await _venueService.ApproveVenueAsync(User.GetUserId(), venueId, request);
+        var message = request.ApprovalStatus == 2
+            ? $"Venue '{venue.Name}' has been approved successfully."
+            : $"Venue '{venue.Name}' has been rejected. Reason: {request.RejectionReason ?? "No reason provided."}";
+        return Ok(ApiResponse<VenueResponse>.SuccessResponse(venue, message));
     }
 }

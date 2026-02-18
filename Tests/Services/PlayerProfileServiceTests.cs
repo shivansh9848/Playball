@@ -5,6 +5,7 @@ using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -35,7 +36,7 @@ public class PlayerProfileServiceTests
             FullName = "John Doe",
             Email = "john@example.com",
             Role = UserRole.User,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = IstClock.Now
         };
 
         var participations = new List<GameParticipant>
@@ -47,8 +48,8 @@ public class PlayerProfileServiceTests
 
         var ratings = new List<RatingResponse>
         {
-            new() { RatingId = 1, Score = 5, Comment = "Great!", CreatedAt = DateTime.UtcNow },
-            new() { RatingId = 2, Score = 4, Comment = "Good", CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
+            new() { RatingId = 1, Score = 5, Comment = "Great!", CreatedAt = IstClock.Now },
+            new() { RatingId = 2, Score = 4, Comment = "Good", CreatedAt = IstClock.Now.AddMinutes(-1) }
         };
 
         _userRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);
@@ -111,7 +112,7 @@ public class PlayerProfileServiceTests
             RatingId = i,
             Score = (i % 5) + 1,
             Comment = $"Review {i}",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-i)
+            CreatedAt = IstClock.Now.AddMinutes(-i)
         }).ToList();
 
         _userRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(user);

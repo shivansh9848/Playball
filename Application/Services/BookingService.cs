@@ -207,7 +207,7 @@ public class BookingService : IBookingService
         return await MapToResponseAsync(booking);
     }
 
-    public async Task CancelBookingAsync(int userId, int bookingId, string? reason)
+    public async Task<BookingResponse> CancelBookingAsync(int userId, int bookingId, string? reason)
     {
         var booking = await _bookingRepository.GetByIdAsync(bookingId);
         if (booking == null)
@@ -259,6 +259,8 @@ public class BookingService : IBookingService
         }
 
         await _bookingRepository.SaveChangesAsync();
+
+        return await MapToResponseAsync(booking);
     }
 
     public async Task<BookingResponse?> GetBookingByIdAsync(int bookingId)

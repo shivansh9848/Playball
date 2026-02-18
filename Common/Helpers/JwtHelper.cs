@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Constants;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Assignment_Example_HU.Common.Helpers;
 
@@ -40,7 +41,7 @@ public class JwtHelper
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(_expiryHours),
+            Expires = IstClock.Now.AddHours(_expiryHours),
             Issuer = _issuer,
             Audience = _audience,
             SigningCredentials = new SigningCredentials(

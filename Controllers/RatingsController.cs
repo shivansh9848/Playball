@@ -1,4 +1,5 @@
 using Assignment_Example_HU.Application.DTOs.Request;
+using Assignment_Example_HU.Application.DTOs.Response;
 using Assignment_Example_HU.Application.Interfaces;
 using Assignment_Example_HU.Common.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -25,7 +26,8 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> RateVenue(int venueId, [FromBody] CreateRatingRequest request)
     {
         var rating = await _ratingService.RateVenueAsync(User.GetUserId(), venueId, request);
-        return Ok(rating);
+        return Ok(ApiResponse<RatingResponse>.SuccessResponse(rating,
+            $"Thank you! Your {request.Score}/5 rating for venue ID {venueId} has been submitted."));
     }
 
     /// <summary>
@@ -36,7 +38,8 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> RateCourt(int courtId, [FromBody] CreateRatingRequest request)
     {
         var rating = await _ratingService.RateCourtAsync(User.GetUserId(), courtId, request);
-        return Ok(rating);
+        return Ok(ApiResponse<RatingResponse>.SuccessResponse(rating,
+            $"Thank you! Your {request.Score}/5 rating for court ID {courtId} has been submitted."));
     }
 
     /// <summary>
@@ -47,7 +50,8 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> RatePlayer(int playerId, [FromBody] CreateRatingRequest request)
     {
         var rating = await _ratingService.RatePlayerAsync(User.GetUserId(), playerId, request);
-        return Ok(rating);
+        return Ok(ApiResponse<RatingResponse>.SuccessResponse(rating,
+            $"Thank you! Your {request.Score}/5 rating for player ID {playerId} has been submitted."));
     }
 
     /// <summary>
@@ -58,7 +62,9 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> GetVenueRatings(int venueId)
     {
         var ratings = await _ratingService.GetVenueRatingsAsync(venueId);
-        return Ok(ratings);
+        var list = ratings.ToList();
+        return Ok(ApiResponse<IEnumerable<RatingResponse>>.SuccessResponse(list,
+            $"{list.Count} rating(s) found for venue ID {venueId}."));
     }
 
     /// <summary>
@@ -69,7 +75,9 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> GetCourtRatings(int courtId)
     {
         var ratings = await _ratingService.GetCourtRatingsAsync(courtId);
-        return Ok(ratings);
+        var list = ratings.ToList();
+        return Ok(ApiResponse<IEnumerable<RatingResponse>>.SuccessResponse(list,
+            $"{list.Count} rating(s) found for court ID {courtId}."));
     }
 
     /// <summary>
@@ -80,6 +88,8 @@ public class RatingsController : ControllerBase
     public async Task<IActionResult> GetPlayerRatings(int playerId)
     {
         var ratings = await _ratingService.GetPlayerRatingsAsync(playerId);
-        return Ok(ratings);
+        var list = ratings.ToList();
+        return Ok(ApiResponse<IEnumerable<RatingResponse>>.SuccessResponse(list,
+            $"{list.Count} rating(s) found for player ID {playerId}."));
     }
 }

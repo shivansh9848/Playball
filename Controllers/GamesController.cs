@@ -1,4 +1,5 @@
 using Assignment_Example_HU.Application.DTOs.Request;
+using Assignment_Example_HU.Application.DTOs.Response;
 using Assignment_Example_HU.Application.Interfaces;
 using Assignment_Example_HU.Common.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -18,27 +19,27 @@ public class GamesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "User,GameOwner")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner")]
     public async Task<IActionResult> CreateGame([FromBody] CreateGameRequest request)
     {
         var game = await _gameService.CreateGameAsync(User.GetUserId(), request);
-        return Ok(game);
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, $"Game '{game.Title}' created successfully. You have been assigned as Game Owner."));
     }
 
     [HttpPost("{gameId}/join")]
-    [Authorize(Roles = "User,GameOwner")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner")]
     public async Task<IActionResult> JoinGame(int gameId)
     {
-        await _gameService.JoinGameAsync(User.GetUserId(), gameId);
-        return NoContent();
+        var game = await _gameService.JoinGameAsync(User.GetUserId(), gameId);
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, $"You have successfully joined '{game.Title}'. Current players: {game.CurrentPlayers}/{game.MaxPlayers}."));
     }
 
     [HttpPost("{gameId}/leave")]
-    [Authorize(Roles = "User,GameOwner")]
+    [Authorize(Roles = "User,GameOwner,VenueOwner")]
     public async Task<IActionResult> LeaveGame(int gameId)
     {
-        await _gameService.LeaveGameAsync(User.GetUserId(), gameId);
-        return NoContent();
+        var game = await _gameService.LeaveGameAsync(User.GetUserId(), gameId);
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, $"You have left '{game.Title}'."));
     }
 
     [HttpGet("public")]
@@ -46,7 +47,8 @@ public class GamesController : ControllerBase
     public async Task<IActionResult> GetPublicGames()
     {
         var games = await _gameService.GetPublicGamesAsync();
-        return Ok(games);
+        var list = games.ToList();
+        return Ok(ApiResponse<IEnumerable<GameResponse>>.SuccessResponse(list, $"{list.Count} public game(s) found."));
     }
 
     [HttpGet("my")]
@@ -54,7 +56,8 @@ public class GamesController : ControllerBase
     public async Task<IActionResult> GetMyGames()
     {
         var games = await _gameService.GetMyGamesAsync(User.GetUserId());
-        return Ok(games);
+        var list = games.ToList();
+        return Ok(ApiResponse<IEnumerable<GameResponse>>.SuccessResponse(list, $"You have {list.Count} game(s)."));
     }
 
     [HttpGet("{gameId}")]
@@ -62,6 +65,8 @@ public class GamesController : ControllerBase
     public async Task<IActionResult> GetGameById(int gameId)
     {
         var game = await _gameService.GetGameByIdAsync(gameId);
-        return Ok(game);
+        if (game == null)
+            return NotFound(ApiResponse<object>.ErrorResponse($"Game with ID {gameId} not found."));
+        return Ok(ApiResponse<GameResponse>.SuccessResponse(game, "Game details retrieved successfully."));
     }
 }

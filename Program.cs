@@ -8,12 +8,50 @@ using Assignment_Example_HU.Application.Interfaces;
 using Assignment_Example_HU.Application.Services;
 using Assignment_Example_HU.API.Middleware;
 using Assignment_Example_HU.Common.Extensions;
+using Assignment_Example_HU.Common.Helpers;
 using Assignment_Example_HU.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        // Serialize all UTC DateTime values as IST (UTC+5:30) in JSON responses.
+        // Database continues to store UTC — only the API output is converted.
+        opts.JsonSerializerOptions.Converters.Add(new IstDateTimeConverter());
+        opts.JsonSerializerOptions.Converters.Add(new IstNullableDateTimeConverter());
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Override default model validation error response with clean ApiResponse format
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value!.Errors.Select(e =>
+                        string.IsNullOrEmpty(e.ErrorMessage)
+                            ? $"Invalid value provided for '{kvp.Key}'. Please check the type and format."
+                            : e.ErrorMessage
+                    ).ToArray()
+                );
+
+            var firstError = errors.Values.FirstOrDefault()?.FirstOrDefault()
+                             ?? "One or more validation errors occurred.";
+
+            var response = new Assignment_Example_HU.Application.DTOs.Response.ApiResponse<object>
+            {
+                Success = false,
+                Message = firstError,
+                Data = null,
+                Errors = errors
+            };
+
+            return new Microsoft.AspNetCore.Mvc.BadRequestObjectResult(response);
+        };
+    });
 
 // Add FluentValidation
 builder.Services.AddFluentValidationAutoValidation()
@@ -45,6 +83,7 @@ builder.Services.AddSingleton<Assignment_Example_HU.Infrastructure.Caching.ICach
 
 // Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IVenueService, VenueService>();
@@ -94,11 +133,11 @@ builder.Services.AddSwaggerGen(c =>
     // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Description = "Enter your JWT token below (without 'Bearer ' prefix - Swagger adds it automatically).",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT"
     });
 
@@ -152,4 +191,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Seed default admin on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<Assignment_Example_HU.Infrastructure.Data.ApplicationDbContext>();
+    await Assignment_Example_HU.Infrastructure.Data.DbSeeder.SeedAdminAsync(db);
+}
+
 app.Run();
+

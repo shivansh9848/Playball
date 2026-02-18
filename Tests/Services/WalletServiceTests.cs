@@ -3,6 +3,7 @@ using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -190,7 +191,7 @@ public class WalletServiceTests
             Amount = 100m,
             BalanceAfter = i * 100m,
             Description = $"Transaction {i}",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-i)
+            CreatedAt = IstClock.Now.AddMinutes(-i)
         }).ToList();
 
         _transactionRepoMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<Transaction, bool>>>()))

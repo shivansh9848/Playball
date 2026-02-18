@@ -5,6 +5,7 @@ using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -27,7 +28,7 @@ public class GameServiceTests
         new()
         {
             GameId = id, Title = "Test Game", VenueId = 1, CourtId = 1, CreatedBy = createdBy,
-            StartTime = DateTime.UtcNow.AddHours(2), EndTime = DateTime.UtcNow.AddHours(4),
+            StartTime = IstClock.Now.AddHours(2), EndTime = IstClock.Now.AddHours(4),
             MinPlayers = min, MaxPlayers = max, CurrentPlayers = current, Status = status,
             IsPublic = true, Creator = new User { UserId = createdBy, FullName = "Creator" },
             Participants = new List<GameParticipant>
@@ -42,7 +43,7 @@ public class GameServiceTests
         var request = new CreateGameRequest
         {
             Title = "Football Match", VenueId = 1, CourtId = 1,
-            StartTime = DateTime.UtcNow.AddHours(2), EndTime = DateTime.UtcNow.AddHours(4),
+            StartTime = IstClock.Now.AddHours(2), EndTime = IstClock.Now.AddHours(4),
             MinPlayers = 4, MaxPlayers = 10, IsPublic = true
         };
         var game = CreateGame();
@@ -61,7 +62,7 @@ public class GameServiceTests
         var request = new CreateGameRequest
         {
             Title = "Bad Game", VenueId = 1, CourtId = 1,
-            StartTime = DateTime.UtcNow.AddHours(2), EndTime = DateTime.UtcNow.AddHours(4),
+            StartTime = IstClock.Now.AddHours(2), EndTime = IstClock.Now.AddHours(4),
             MinPlayers = 15, MaxPlayers = 5
         };
 
@@ -74,7 +75,7 @@ public class GameServiceTests
         var request = new CreateGameRequest
         {
             Title = "Bad Game", VenueId = 1, CourtId = 1,
-            StartTime = DateTime.UtcNow.AddHours(4), EndTime = DateTime.UtcNow.AddHours(2),
+            StartTime = IstClock.Now.AddHours(4), EndTime = IstClock.Now.AddHours(2),
             MinPlayers = 2, MaxPlayers = 10
         };
 
@@ -87,7 +88,7 @@ public class GameServiceTests
         var request = new CreateGameRequest
         {
             Title = "Past Game", VenueId = 1, CourtId = 1,
-            StartTime = DateTime.UtcNow.AddHours(-1), EndTime = DateTime.UtcNow.AddHours(1),
+            StartTime = IstClock.Now.AddHours(-1), EndTime = IstClock.Now.AddHours(1),
             MinPlayers = 2, MaxPlayers = 10
         };
 

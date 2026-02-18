@@ -5,6 +5,7 @@ using Assignment_Example_HU.Application.Services;
 using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -32,7 +33,7 @@ public class DiscountServiceTests
         var request = new CreateDiscountRequest
         {
             Scope = "Venue", VenueId = 1, PercentOff = 20,
-            ValidFrom = DateTime.UtcNow, ValidTo = DateTime.UtcNow.AddDays(30)
+            ValidFrom = IstClock.Now, ValidTo = IstClock.Now.AddDays(30)
         };
 
         var result = await _discountService.CreateDiscountAsync(1, request);
@@ -52,7 +53,7 @@ public class DiscountServiceTests
         var request = new CreateDiscountRequest
         {
             Scope = "Court", CourtId = 1, PercentOff = 15,
-            ValidFrom = DateTime.UtcNow, ValidTo = DateTime.UtcNow.AddDays(7)
+            ValidFrom = IstClock.Now, ValidTo = IstClock.Now.AddDays(7)
         };
 
         var result = await _discountService.CreateDiscountAsync(1, request);
@@ -66,7 +67,7 @@ public class DiscountServiceTests
         var request = new CreateDiscountRequest
         {
             Scope = "Venue", VenueId = 1, PercentOff = 20,
-            ValidFrom = DateTime.UtcNow.AddDays(30), ValidTo = DateTime.UtcNow
+            ValidFrom = IstClock.Now.AddDays(30), ValidTo = IstClock.Now
         };
 
         await Assert.ThrowsAsync<BusinessException>(() => _discountService.CreateDiscountAsync(1, request));
@@ -78,7 +79,7 @@ public class DiscountServiceTests
         var request = new CreateDiscountRequest
         {
             Scope = "Venue", VenueId = null, PercentOff = 10,
-            ValidFrom = DateTime.UtcNow, ValidTo = DateTime.UtcNow.AddDays(7)
+            ValidFrom = IstClock.Now, ValidTo = IstClock.Now.AddDays(7)
         };
 
         await Assert.ThrowsAsync<BusinessException>(() => _discountService.CreateDiscountAsync(1, request));
@@ -93,7 +94,7 @@ public class DiscountServiceTests
         var request = new CreateDiscountRequest
         {
             Scope = "Venue", VenueId = 1, PercentOff = 20,
-            ValidFrom = DateTime.UtcNow, ValidTo = DateTime.UtcNow.AddDays(7)
+            ValidFrom = IstClock.Now, ValidTo = IstClock.Now.AddDays(7)
         };
 
         await Assert.ThrowsAsync<UnauthorizedException>(() => _discountService.CreateDiscountAsync(1, request));
@@ -109,7 +110,7 @@ public class DiscountServiceTests
         };
         _discountRepoMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<Discount, bool>>>())).ReturnsAsync(discounts);
 
-        var result = await _discountService.GetApplicableDiscountAsync(1, 1, DateTime.UtcNow.AddDays(1));
+        var result = await _discountService.GetApplicableDiscountAsync(1, 1, IstClock.Now.AddDays(1));
 
         Assert.NotNull(result);
         Assert.Equal(20, result!.PercentOff);
@@ -121,7 +122,7 @@ public class DiscountServiceTests
         _discountRepoMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<Discount, bool>>>()))
             .ReturnsAsync(new List<Discount>());
 
-        var result = await _discountService.GetApplicableDiscountAsync(1, 1, DateTime.UtcNow);
+        var result = await _discountService.GetApplicableDiscountAsync(1, 1, IstClock.Now);
 
         Assert.Null(result);
     }

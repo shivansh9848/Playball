@@ -17,6 +17,10 @@ public class UserService : IUserService
 
     public async Task<UserProfileResponse> AssignRoleAsync(int userId, UserRole newRole)
     {
+        // GameOwner is auto-assigned when a user creates their first game — Admin cannot assign it manually
+        if (newRole == UserRole.GameOwner)
+            throw new BusinessException("GameOwner role is automatically assigned when a user creates their first game. It cannot be manually assigned.");
+
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
             throw new NotFoundException("User", userId);

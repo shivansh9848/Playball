@@ -67,6 +67,15 @@ public class GameService : IGameService
         await _participantRepository.AddAsync(participant);
         await _participantRepository.SaveChangesAsync();
 
+        // Auto-promote creator to GameOwner if they are a plain User
+        var creator = await _userRepository.GetByIdAsync(userId);
+        if (creator != null && creator.Role == UserRole.User)
+        {
+            creator.Role = UserRole.GameOwner;
+            await _userRepository.UpdateAsync(creator);
+            await _userRepository.SaveChangesAsync();
+        }
+
         return await MapToResponse(game.GameId);
     }
 

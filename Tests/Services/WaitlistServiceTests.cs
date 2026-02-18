@@ -5,6 +5,7 @@ using Assignment_Example_HU.Common.Exceptions;
 using Assignment_Example_HU.Domain.Entities;
 using Assignment_Example_HU.Domain.Enums;
 using Assignment_Example_HU.Infrastructure.Repositories;
+using Assignment_Example_HU.Common.Helpers;
 
 namespace Playball.Tests.Services;
 
@@ -196,8 +197,8 @@ public class WaitlistServiceTests
         // Arrange
         var entries = new List<Waitlist>
         {
-            new() { WaitlistId = 1, GameId = 1, UserId = 10, Position = 1, JoinedAt = DateTime.UtcNow },
-            new() { WaitlistId = 2, GameId = 1, UserId = 20, Position = 2, JoinedAt = DateTime.UtcNow },
+            new() { WaitlistId = 1, GameId = 1, UserId = 10, Position = 1, JoinedAt = IstClock.Now },
+            new() { WaitlistId = 2, GameId = 1, UserId = 20, Position = 2, JoinedAt = IstClock.Now },
         };
 
         _waitlistRepoMock.Setup(r => r.FindAsync(It.IsAny<Expression<Func<Waitlist, bool>>>()))
