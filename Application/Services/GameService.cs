@@ -48,15 +48,22 @@ public class GameService : IGameService
             throw new BusinessException("StartTime must be in the future");
 
         // Validate that the user has a confirmed booking for this slot
-        var booking = await _bookingRepository.FirstOrDefaultAsync(b => 
+        // Validate that the user has a confirmed booking for this slot
+        // Debugging: fetch possible bookings first to give better error messages
+        var bookings = await _bookingRepository.FindAsync(b => 
             b.UserId == userId && 
-            b.CourtId == request.CourtId && 
-            b.SlotStartTime == request.StartTime && 
-            b.SlotEndTime == request.EndTime &&
-            b.Status == BookingStatus.Confirmed);
+            b.CourtId == request.CourtId);
+
+        var booking = bookings.FirstOrDefault(b => 
+            Math.Abs((b.SlotStartTime - request.StartTime).TotalSeconds) < 1 && 
+            Math.Abs((b.SlotEndTime - request.EndTime).TotalSeconds) < 1);
 
         if (booking == null)
-            throw new BusinessException("You must have a confirmed booking for this slot to create a game.");
+            throw new BusinessException($"No booking found for this court ({request.CourtId}) at the specified time ({request.StartTime} - {request.EndTime}). Ensure dates are exact.");
+
+        if (booking.Status != BookingStatus.Confirmed)
+            throw new BusinessException($"You have a booking, but its status is '{booking.Status}'. It must be 'Confirmed' to create a game.");
+
 
         // Check if a game already exists for this booking
         var existingGame = await _gameRepository.FirstOrDefaultAsync(g => g.BookingId == booking.BookingId);
